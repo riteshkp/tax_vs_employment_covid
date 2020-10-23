@@ -21,11 +21,11 @@ def load_data(make_csv = False):
     """
 
     ## Load tax data and get combinedRate
-    tax = pd.read_csv('state_tax.csv', delimiter=',')
+    tax = pd.read_csv('data/state_tax.csv', delimiter=',')
 
     ## Load all employment data merged with geo_state data
-    employment = pd.read_csv('state_employment.csv', delimiter=',')
-    geo_state = pd.read_csv('geo_state.csv', delimiter=',')
+    employment = pd.read_csv('data/state_employment.csv', delimiter=',')
+    geo_state = pd.read_csv('data/geo_state.csv', delimiter=',')
     merged_data = employment.merge(geo_state, on='statefips')
 
     ## Now merge with tax data
