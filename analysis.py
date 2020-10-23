@@ -38,12 +38,18 @@ def load_data(make_csv = False):
 
     return (clean_data)
 
-def plot_main(df, isLow=False, isMed=False, isHigh=False, is40=False, is60=False, is65=False):
+def plot_main(df, isLow=False, isMed=False, isHigh=False, is40=False, is60=False, is65=False, is70=False):
     """
     output plot of states with top and bottom 5 tax rates and their employment recovery.
     arg df: clean data obtained from load_data
     returns: nothing
     """
+
+    font = {'family' : 'normal',
+        'weight' : 'bold',
+        'size'   : 22}
+
+    plt.rc('font', **font)
 
     ## Get top 5 tax rate states
     top5 = df[df['combinedRate'] >= df['combinedRate'].quantile(.90)]
@@ -72,7 +78,7 @@ def plot_main(df, isLow=False, isMed=False, isHigh=False, is40=False, is60=False
         # For middle income
         ax.bar(dates, top5['emp_combined_incmiddle'], color='red', label="Highest 5 Tax")
         ax.bar(dates, bot5['emp_combined_incmiddle'], color='blue', alpha=0.3, label="Lowest 5 Tax")
-        ax.set(xlabel="Date", ylabel="Employment level for Middle Income Workers ($27,000 to $60,000)",
+        ax.set(xlabel="Date", ylabel="Employment level for Mid Income Workers ($27k to $60k)",
                title="COVID Impact on Employment of Top and Bottom 5 Taxed States")
     elif(isHigh):
         # For high income
@@ -114,6 +120,16 @@ def plot_main(df, isLow=False, isMed=False, isHigh=False, is40=False, is60=False
         ax.bar(dates, bot_y, color='blue', alpha=0.3, label="Lowest 5 Tax")
         ax.set(xlabel="Date", ylabel="Employment level for Workers in  education and health services",
                title="COVID Impact on Employment of Top and Bottom 5 Taxed States")
+    elif(is70):
+        # For workers in education and health services
+        top5 = top5[top5['emp_combined_ss70'] != '.']
+        top_y = pd.to_numeric(top5['emp_combined_ss70'])
+        bot5 = bot5[bot5['emp_combined_ss70'] != '.']
+        bot_y = pd.to_numeric(bot5['emp_combined_ss70'])
+        ax.bar(top5['dates'], top_y, color='red', label="Highest 5 Tax")
+        ax.bar(dates, bot_y, color='blue', alpha=0.3, label="Lowest 5 Tax")
+        ax.set(xlabel="Date", ylabel="Employment level for Workers in leisure and hospitality",
+               title="COVID Impact on Employment of Top and Bottom 5 Taxed States")
     else:
         # For all workers overall
         ax.bar(dates, top5['emp_combined'], color='red', label="Highest 5 Tax")
@@ -127,7 +143,7 @@ def plot_main(df, isLow=False, isMed=False, isHigh=False, is40=False, is60=False
     date_form = DateFormatter("%m-%d")
     ax.xaxis.set_major_formatter(date_form)
     
-
+    plt.grid()
     plt.show()
 
 def t_test(df):
@@ -136,11 +152,11 @@ def t_test(df):
     methodology: 1. take minimum employment and compare to current day.
                  2. compute the difference between the two and set as 
                     our recovery value
-                 3. compute t-test between the top 5% and bottom 5%
+                 3. compute t-test between the top 20% and bottom 20%
                     of this recovery value. 
     for now, just doing this with emp_combined.
     arg df: clean data obtained from load_data
-    returns: nothing
+    returns: dictionary of p-values for each of the t-tests performed
     """
 
     # Get top and bottom 10 dfs for emp_combined
@@ -196,20 +212,17 @@ def t_test(df):
     top10_clean = top10[top10['emp_combined_inchigh'] != '.']
     top10_emp = top10_clean.groupby(['statename'], sort=False)['emp_combined_incmiddle'].min()
     top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', 'emp_combined_inchigh']]
-    x = top10_emp.tolist()
-    y = top10_cur['emp_combined_inchigh'].tolist()
-    y = y[:1] + y[1+1:]
-    y = list(map(float, y)) 
+    top10_cur = top10_cur[top10_cur['emp_combined_inchigh'] != '.']
+    x = list(map(float,top10_emp.tolist()))
+    y = list(map(float,top10_cur['emp_combined_inchigh'].tolist()))
     a =  [y_i - x_i for y_i, x_i in zip(y, x)]
 
     bot10_clean = bot10[bot10['emp_combined_inchigh'] != '.']
     bot10_emp = bot10_clean.groupby(['statename'], sort=False)['emp_combined_incmiddle'].min()
     bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', 'emp_combined_inchigh']]
-    x = bot10_emp.tolist()
-    y = bot10_cur['emp_combined_inchigh'].tolist()
-    y = y[:2] + y[2+1:]
-    y = y[:8] + y[8+1:]
-    y = list(map(float, y)) 
+    bot10_cur = bot10_cur[bot10_cur['emp_combined_inchigh'] != '.']
+    x = list(map(float,bot10_emp.tolist()))
+    y = list(map(float,bot10_cur['emp_combined_inchigh'].tolist()))
     b =  [y_i - x_i for y_i, x_i in zip(y, x)]
 
     t, p_high = ttest_ind(a, b, equal_var=False)
@@ -271,6 +284,25 @@ def t_test(df):
 
     t, p_ss65 = ttest_ind(a, b, equal_var=False)
 
+    # repeat for workers in hospitality
+    top10_clean = top10[top10['emp_combined_ss70'] != '.']
+    top10_emp = top10_clean.groupby(['statename'], sort=False)['emp_combined_ss70'].min()
+    top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', 'emp_combined_ss70']]
+    top10_cur = top10_cur[top10_cur['emp_combined_ss70'] != '.']
+    x = list(map(float,top10_emp.tolist()))
+    y = list(map(float,top10_cur['emp_combined_ss70'].tolist()))
+    a =  [y_i - x_i for y_i, x_i in zip(y, x)]
+
+    bot10_clean = bot10[bot10['emp_combined_ss70'] != '.']
+    bot10_emp = bot10_clean.groupby(['statename'], sort=False)['emp_combined_ss70'].min()
+    bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', 'emp_combined_ss70']]
+    bot10_cur = bot10_cur[bot10_cur['emp_combined_ss70'] != '.']
+    x = list(map(float,bot10_emp.tolist()))
+    y = list(map(float,bot10_cur['emp_combined_ss70'].tolist()))
+    b =  [y_i - x_i for y_i, x_i in zip(y, x)]
+
+    t, p_ss70 = ttest_ind(a, b, equal_var=False)
+
     res = {
         "emp_combined": p_combined,
         "emp_combined_inclow": p_low,
@@ -278,7 +310,8 @@ def t_test(df):
         "emp_combined_inchigh": p_high,
         "emp_combined_ss40": p_ss40,
         "emp_combined_ss60": p_ss60,
-        "emp_combined_ss65": p_ss65
+        "emp_combined_ss65": p_ss65,
+        "emp_combined_ss70": p_ss70
     }
 
     return (res)
@@ -287,11 +320,12 @@ def t_test(df):
 if __name__ == "__main__":
     clean_data = load_data()
     plot_main(clean_data, isLow=False, 
-                          isMed=True,
+                          isMed=False,
                           isHigh=False,
                           is40=False,
                           is60=False,
-                          is65=False)
+                          is65=False,
+                          is70=True)
 
     # Null hypothesis that the mean recovery rate between top 
     # and bottom 10 states based on tax rate is equal.
