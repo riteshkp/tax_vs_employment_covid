@@ -9,9 +9,7 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 from matplotlib.dates import DateFormatter
-import seaborn as sns
 from scipy.stats import ttest_ind
 
 def load_data(make_csv = False):
@@ -159,173 +157,40 @@ def t_test(df):
     returns: dictionary of p-values for each of the t-tests performed
     """
 
-    # Get top and bottom 10 dfs for emp_combined
     top10 = df[df['combinedRate'] >= df['combinedRate'].quantile(.80)]
-    top10_emp = top10.groupby(['statename'], sort=False)['emp_combined'].min()
-    top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', 'emp_combined']]
-    x = top10_emp.tolist()
-    y = top10_cur['emp_combined'].tolist()
-    a =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
     bot10 = df[df['combinedRate'] <= df['combinedRate'].quantile(.20)]
-    bot10_emp = bot10.groupby(['statename'], sort=False)['emp_combined'].min()
-    bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', 'emp_combined']]
-    x = bot10_emp.tolist()
-    y = bot10_cur['emp_combined'].tolist()
-    b =  [y_i - x_i for y_i, x_i in zip(y, x)]
 
-    t, p_combined = ttest_ind(a, b, equal_var=False)
+    emp_labels = ['emp_combined', 'emp_combined_inclow', 'emp_combined_incmiddle',
+                  'emp_combined_inchigh', 'emp_combined_ss40', 'emp_combined_ss60',
+                  'emp_combined_ss65', 'emp_combined_ss70']
+    p_values = []
 
-    # repeat for low income employment
-    top10_emp = top10.groupby(['statename'], sort=False)['emp_combined_inclow'].min()
-    top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', 'emp_combined_inclow']]
-    x = top10_emp.tolist()
-    y = top10_cur['emp_combined_inclow'].tolist()
-    a =  [y_i - x_i for y_i, x_i in zip(y, x)]
-    
+    for label in emp_labels:
+        top10_clean = top10[top10[label] != '.']
+        top10_emp = top10_clean.groupby(['statename'], sort=False)[label].min()
+        top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', label]]
+        top10_cur = top10_cur[top10_cur[label] != '.']
+        x = list(map(float,top10_emp.tolist()))
+        y = list(map(float,top10_cur[label].tolist()))
+        a =  [y_i - x_i for y_i, x_i in zip(y, x)]
 
-    bot10_emp = bot10.groupby(['statename'], sort=False)['emp_combined_inclow'].min()
-    bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', 'emp_combined_inclow']]
-    b =  bot10_cur['emp_combined_inclow'] - bot10_emp[2]
-    x = bot10_emp.tolist()
-    y = bot10_cur['emp_combined_inclow'].tolist()
-    b =  [y_i - x_i for y_i, x_i in zip(y, x)]
+        bot10_clean = bot10[bot10[label] != '.']
+        bot10_emp = bot10_clean.groupby(['statename'], sort=False)[label].min()
+        bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', label]]
+        bot10_cur = bot10_cur[bot10_cur[label] != '.']
+        x = list(map(float,bot10_emp.tolist()))
+        y = list(map(float,bot10_cur[label].tolist()))
+        b =  [y_i - x_i for y_i, x_i in zip(y, x)]
 
-    t, p_low = ttest_ind(a, b, equal_var=False)
+        t, p_val = ttest_ind(a, b, equal_var=False)
+        p_values.append(p_val)
 
-    # repeat for middle income employment
-    top10_emp = top10.groupby(['statename'], sort=False)['emp_combined_incmiddle'].min()
-    top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', 'emp_combined_incmiddle']]
-    x = top10_emp.tolist()
-    y = top10_cur['emp_combined_incmiddle'].tolist()
-    a =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    bot10_emp = bot10.groupby(['statename'], sort=False)['emp_combined_incmiddle'].min()
-    bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', 'emp_combined_incmiddle']]
-    x = bot10_emp.tolist()
-    y = bot10_cur['emp_combined_incmiddle'].tolist()
-    b =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    t, p_middle = ttest_ind(a, b, equal_var=False)
-
-    # repeat for high income employment
-    top10_clean = top10[top10['emp_combined_inchigh'] != '.']
-    top10_emp = top10_clean.groupby(['statename'], sort=False)['emp_combined_incmiddle'].min()
-    top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', 'emp_combined_inchigh']]
-    top10_cur = top10_cur[top10_cur['emp_combined_inchigh'] != '.']
-    x = list(map(float,top10_emp.tolist()))
-    y = list(map(float,top10_cur['emp_combined_inchigh'].tolist()))
-    a =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    bot10_clean = bot10[bot10['emp_combined_inchigh'] != '.']
-    bot10_emp = bot10_clean.groupby(['statename'], sort=False)['emp_combined_incmiddle'].min()
-    bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', 'emp_combined_inchigh']]
-    bot10_cur = bot10_cur[bot10_cur['emp_combined_inchigh'] != '.']
-    x = list(map(float,bot10_emp.tolist()))
-    y = list(map(float,bot10_cur['emp_combined_inchigh'].tolist()))
-    b =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    t, p_high = ttest_ind(a, b, equal_var=False)
-
-    # repeat for workers in trade, transportation, and utilities
-    top10_clean = top10[top10['emp_combined_ss40'] != '.']
-    top10_emp = top10_clean.groupby(['statename'], sort=False)['emp_combined_ss40'].min()
-    top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', 'emp_combined_ss40']]
-    top10_cur = top10_cur[top10_cur['emp_combined_ss40'] != '.']
-    x = list(map(float,top10_emp.tolist()))
-    y = list(map(float,top10_cur['emp_combined_ss40'].tolist()))
-    a =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    bot10_clean = bot10[bot10['emp_combined_ss40'] != '.']
-    bot10_emp = bot10_clean.groupby(['statename'], sort=False)['emp_combined_ss40'].min()
-    bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', 'emp_combined_ss40']]
-    bot10_cur = bot10_cur[bot10_cur['emp_combined_ss40'] != '.']
-    x = list(map(float,bot10_emp.tolist()))
-    y = list(map(float,bot10_cur['emp_combined_ss40'].tolist()))
-    b =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    t, p_ss40 = ttest_ind(a, b, equal_var=False)
-
-    # repeat for workers in professional and business services
-    top10_clean = top10[top10['emp_combined_ss60'] != '.']
-    top10_emp = top10_clean.groupby(['statename'], sort=False)['emp_combined_ss60'].min()
-    top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', 'emp_combined_ss60']]
-    top10_cur = top10_cur[top10_cur['emp_combined_ss60'] != '.']
-    x = list(map(float,top10_emp.tolist()))
-    y = list(map(float,top10_cur['emp_combined_ss60'].tolist()))
-    a =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    bot10_clean = bot10[bot10['emp_combined_ss60'] != '.']
-    bot10_emp = bot10_clean.groupby(['statename'], sort=False)['emp_combined_ss60'].min()
-    bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', 'emp_combined_ss60']]
-    bot10_cur = bot10_cur[bot10_cur['emp_combined_ss60'] != '.']
-    x = list(map(float,bot10_emp.tolist()))
-    y = list(map(float,bot10_cur['emp_combined_ss60'].tolist()))
-    b =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    t, p_ss60 = ttest_ind(a, b, equal_var=False)
-
-    # repeat for workers in education and health services
-    top10_clean = top10[top10['emp_combined_ss65'] != '.']
-    top10_emp = top10_clean.groupby(['statename'], sort=False)['emp_combined_ss65'].min()
-    top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', 'emp_combined_ss65']]
-    top10_cur = top10_cur[top10_cur['emp_combined_ss65'] != '.']
-    x = list(map(float,top10_emp.tolist()))
-    y = list(map(float,top10_cur['emp_combined_ss65'].tolist()))
-    a =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    bot10_clean = bot10[bot10['emp_combined_ss65'] != '.']
-    bot10_emp = bot10_clean.groupby(['statename'], sort=False)['emp_combined_ss65'].min()
-    bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', 'emp_combined_ss65']]
-    bot10_cur = bot10_cur[bot10_cur['emp_combined_ss65'] != '.']
-    x = list(map(float,bot10_emp.tolist()))
-    y = list(map(float,bot10_cur['emp_combined_ss65'].tolist()))
-    b =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    t, p_ss65 = ttest_ind(a, b, equal_var=False)
-
-    # repeat for workers in hospitality
-    top10_clean = top10[top10['emp_combined_ss70'] != '.']
-    top10_emp = top10_clean.groupby(['statename'], sort=False)['emp_combined_ss70'].min()
-    top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', 'emp_combined_ss70']]
-    top10_cur = top10_cur[top10_cur['emp_combined_ss70'] != '.']
-    x = list(map(float,top10_emp.tolist()))
-    y = list(map(float,top10_cur['emp_combined_ss70'].tolist()))
-    a =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    bot10_clean = bot10[bot10['emp_combined_ss70'] != '.']
-    bot10_emp = bot10_clean.groupby(['statename'], sort=False)['emp_combined_ss70'].min()
-    bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', 'emp_combined_ss70']]
-    bot10_cur = bot10_cur[bot10_cur['emp_combined_ss70'] != '.']
-    x = list(map(float,bot10_emp.tolist()))
-    y = list(map(float,bot10_cur['emp_combined_ss70'].tolist()))
-    b =  [y_i - x_i for y_i, x_i in zip(y, x)]
-
-    t, p_ss70 = ttest_ind(a, b, equal_var=False)
-
-    res = {
-        "emp_combined": p_combined,
-        "emp_combined_inclow": p_low,
-        "emp_combined_incmiddle": p_middle,
-        "emp_combined_inchigh": p_high,
-        "emp_combined_ss40": p_ss40,
-        "emp_combined_ss60": p_ss60,
-        "emp_combined_ss65": p_ss65,
-        "emp_combined_ss70": p_ss70
-    }
-
-    return (res)
+    return (dict(zip(emp_labels, p_values)) )
 
 
 if __name__ == "__main__":
     clean_data = load_data()
-    plot_main(clean_data, isLow=False, 
-                          isMed=False,
-                          isHigh=False,
-                          is40=False,
-                          is60=False,
-                          is65=False,
-                          is70=True)
+    plot_main(clean_data)
 
     # Null hypothesis that the mean recovery rate between top 
     # and bottom 10 states based on tax rate is equal.
@@ -334,4 +199,4 @@ if __name__ == "__main__":
     # We conclude the means are different, thus tax rate
     # has an effect on recovery rate. 
     p = t_test(clean_data)
-    print(p)
+    # print(p)
