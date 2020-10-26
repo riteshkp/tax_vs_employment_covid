@@ -9,8 +9,12 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import warnings
+
 from matplotlib.dates import DateFormatter
 from scipy.stats import ttest_ind
+
+warnings.filterwarnings('ignore')
 
 def load_data(make_csv = False):
     """
@@ -46,7 +50,6 @@ def plot_main(df, isLow=False, isMed=False, isHigh=False, is40=False, is60=False
     font = {'family' : 'normal',
         'weight' : 'bold',
         'size'   : 22}
-
     plt.rc('font', **font)
 
     ## Get top 5 tax rate states
@@ -168,16 +171,14 @@ def t_test(df):
     for label in emp_labels:
         top10_clean = top10[top10[label] != '.']
         top10_emp = top10_clean.groupby(['statename'], sort=False)[label].min()
-        top10_cur = top10[np.logical_and(top10['month'] == 9, top10['day'] == 1)][['statename', label]]
-        top10_cur = top10_cur[top10_cur[label] != '.']
+        top10_cur = top10_clean[np.logical_and(top10['month'] == 9, top10['day'] == 3)][['statename', label]]
         x = list(map(float,top10_emp.tolist()))
         y = list(map(float,top10_cur[label].tolist()))
         a =  [y_i - x_i for y_i, x_i in zip(y, x)]
 
         bot10_clean = bot10[bot10[label] != '.']
         bot10_emp = bot10_clean.groupby(['statename'], sort=False)[label].min()
-        bot10_cur = bot10[np.logical_and(bot10['month'] == 9, bot10['day'] == 1)][['statename', label]]
-        bot10_cur = bot10_cur[bot10_cur[label] != '.']
+        bot10_cur = bot10_clean[np.logical_and(bot10['month'] == 9, bot10['day'] == 3)][['statename', label]]
         x = list(map(float,bot10_emp.tolist()))
         y = list(map(float,bot10_cur[label].tolist()))
         b =  [y_i - x_i for y_i, x_i in zip(y, x)]
@@ -190,7 +191,7 @@ def t_test(df):
 
 if __name__ == "__main__":
     clean_data = load_data()
-    plot_main(clean_data)
+    #plot_main(clean_data)
 
     # Null hypothesis that the mean recovery rate between top 
     # and bottom 10 states based on tax rate is equal.
@@ -199,4 +200,4 @@ if __name__ == "__main__":
     # We conclude the means are different, thus tax rate
     # has an effect on recovery rate. 
     p = t_test(clean_data)
-    # print(p)
+    print(p)
